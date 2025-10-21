@@ -50,6 +50,13 @@ func WriteLogStream(_ context.Context, w http.ResponseWriter, msgs <-chan *backe
 			fmt.Fprintf(sysErrStream, "Error grabbing logs: %v\n", msg.Err)
 			continue
 		}
+
+		// continue to next line if the source isn't enabled in the config
+		if (msg.Source == "stdout" && !config.ShowStdout) ||
+			(msg.Source == "stderr" && !config.ShowStderr) {
+			continue
+		}
+
 		logLine := msg.Line
 		if config.Details {
 			logLine = append(attrsByteSlice(msg.Attrs), ' ')
@@ -58,10 +65,11 @@ func WriteLogStream(_ context.Context, w http.ResponseWriter, msgs <-chan *backe
 		if config.Timestamps {
 			logLine = append([]byte(msg.Timestamp.Format(rfc3339NanoFixed)+" "), logLine...)
 		}
-		if msg.Source == "stdout" && config.ShowStdout {
+
+		if msg.Source == "stdout" {
 			_, _ = outStream.Write(logLine)
 		}
-		if msg.Source == "stderr" && config.ShowStderr {
+		if msg.Source == "stderr" {
 			_, _ = errStream.Write(logLine)
 		}
 	}
